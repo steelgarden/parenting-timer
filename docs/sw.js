@@ -1,5 +1,6 @@
-const CACHE = 'parenting-timer-v1';
-const ASSETS = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png'];
+const CACHE = 'parenting-timer-v2';
+const BASE = self.registration.scope;
+const ASSETS = ['', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png'].map(f => BASE + f);
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
