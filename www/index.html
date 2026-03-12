@@ -3,7 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Timer</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1a1a2e">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Parenting Timer</title>
 <style>
   :root {
     --bg: #1a1a2e;
@@ -245,6 +250,29 @@
   .speed-header span {
     font-size: 14px;
     color: var(--text-dim);
+  }
+
+  .speed-mode-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .speed-mode-btn {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--text-dim);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .speed-mode-btn.active {
+    border-color: var(--primary);
+    color: var(--text);
   }
 
   .speed-close {
@@ -536,8 +564,24 @@
     <span id="speedLabel" style="font-size:20px;font-weight:600;color:var(--primary)">1.00&times;</span>
     <button class="speed-close" id="speedClose">&times;</button>
   </div>
-  <input type="range" class="speed-slider" id="speedSlider" min="0.5" max="2" step="0.05" value="1">
-  <div id="realDuration" style="margin-top:16px;text-align:center;font-size:14px;color:var(--text-dim)"></div>
+  <div class="speed-mode-toggle" id="speedModeToggle">
+    <button class="speed-mode-btn active" data-mode="ratio">Speed ratio</button>
+    <button class="speed-mode-btn" data-mode="fixed">Fixed time</button>
+  </div>
+  <div id="ratioPanel">
+    <input type="range" class="speed-slider" id="speedSlider" min="0.5" max="2" step="0.05" value="1">
+    <div id="realDuration" style="margin-top:16px;text-align:center;font-size:14px;color:var(--text-dim)"></div>
+  </div>
+  <div id="fixedPanel" style="display:none;text-align:center;margin-top:12px;">
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:10px;">Real time the countdown will take:</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
+      <input type="number" id="fixedM" min="0" max="999" value="5" style="width:50px;text-align:center;background:var(--bg);border:1px solid var(--text-dim);border-radius:8px;color:var(--text);font-size:18px;padding:6px;">
+      <span style="color:var(--text-dim);">m</span>
+      <input type="number" id="fixedS" min="0" max="59" value="0" style="width:50px;text-align:center;background:var(--bg);border:1px solid var(--text-dim);border-radius:8px;color:var(--text);font-size:18px;padding:6px;">
+      <span style="color:var(--text-dim);">s</span>
+    </div>
+    <div id="fixedInfo" style="margin-top:12px;font-size:13px;color:var(--text-dim);"></div>
+  </div>
 </div>
 
 <script>
@@ -651,7 +695,10 @@
         stopwatchSpeed: modeState.stopwatch.speed,
         pickH: parseInt(pickH.value) || 0,
         pickM: parseInt(pickM.value) || 0,
-        pickS: parseInt(pickS.value) || 0
+        pickS: parseInt(pickS.value) || 0,
+        speedMode,
+        fixedM: parseInt(fixedM?.value) || 0,
+        fixedS: parseInt(fixedS?.value) || 0
       }));
     } catch {}
   }
@@ -828,6 +875,8 @@
       const sec = parseInt(pickS.value) || 0;
       s.totalMs = (h * 3600 + m * 60 + sec) * 1000;
       if (s.totalMs <= 0) return;
+      // Recalculate speed from fixed time if in fixed mode
+      if (speedMode === 'fixed') updateFixedSpeed();
       s.elapsed = 0;
     }
 
@@ -994,6 +1043,7 @@
     speedSlider.value = getSpeed();
     updateSpeedLabel();
     updateRealDuration();
+    updateSpeedModeUI();
     speedControl.classList.add('visible');
     overlay.classList.add('visible');
   }
@@ -1005,6 +1055,66 @@
 
   speedClose.addEventListener('click', hideSpeed);
   overlay.addEventListener('click', hideSpeed);
+
+  // Speed mode: 'ratio' or 'fixed'
+  let speedMode = saved.speedMode || 'ratio';
+  const ratioPanel = document.getElementById('ratioPanel');
+  const fixedPanel = document.getElementById('fixedPanel');
+  const fixedM = document.getElementById('fixedM');
+  const fixedS = document.getElementById('fixedS');
+  const fixedInfo = document.getElementById('fixedInfo');
+  const speedModeToggle = document.getElementById('speedModeToggle');
+
+  // Restore saved fixed time
+  if (saved.fixedM !== undefined) fixedM.value = saved.fixedM;
+  if (saved.fixedS !== undefined) fixedS.value = saved.fixedS;
+
+  function updateSpeedModeUI() {
+    speedModeToggle.querySelectorAll('.speed-mode-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === speedMode);
+    });
+    const isCountdown = mode === 'countdown';
+    ratioPanel.style.display = speedMode === 'ratio' ? '' : 'none';
+    fixedPanel.style.display = (speedMode === 'fixed' && isCountdown) ? '' : 'none';
+    // Hide fixed time toggle in stopwatch mode
+    speedModeToggle.style.display = isCountdown ? 'flex' : 'none';
+    if (speedMode === 'fixed' && isCountdown) updateFixedSpeed();
+  }
+
+  speedModeToggle.addEventListener('click', e => {
+    const btn = e.target.closest('.speed-mode-btn');
+    if (!btn) return;
+    speedMode = btn.dataset.mode;
+    updateSpeedModeUI();
+    saveSettings();
+  });
+
+  function getCountdownSeconds() {
+    return (parseInt(pickH.value) || 0) * 3600 + (parseInt(pickM.value) || 0) * 60 + (parseInt(pickS.value) || 0);
+  }
+
+  function updateFixedSpeed() {
+    const childSec = getCountdownSeconds();
+    const fixedSec = (parseInt(fixedM.value) || 0) * 60 + (parseInt(fixedS.value) || 0);
+    if (childSec <= 0 || fixedSec <= 0) {
+      fixedInfo.textContent = 'Set both countdown and real time';
+      return;
+    }
+    const ratio = childSec / fixedSec;
+    // Clamp to reasonable range
+    if (ratio < 0.1 || ratio > 10) {
+      fixedInfo.innerHTML = `Speed would be <span style="color:var(--primary)">${ratio.toFixed(2)}&times;</span> — too extreme`;
+      return;
+    }
+    setSpeed(ratio);
+    document.getElementById('speedLabel').textContent = ratio.toFixed(2) + '\u00d7';
+    fixedInfo.innerHTML = `Speed auto-set to <span style="color:var(--primary)">${ratio.toFixed(2)}&times;</span>`;
+  }
+
+  [fixedM, fixedS].forEach(input => {
+    input.addEventListener('focus', () => input.select());
+    input.addEventListener('input', () => { updateFixedSpeed(); saveSettings(); });
+  });
 
   speedSlider.addEventListener('input', () => {
     setSpeed(parseFloat(speedSlider.value));
@@ -1042,7 +1152,11 @@
 
   [pickH, pickM, pickS].forEach(input => {
     input.addEventListener('focus', () => input.select());
-    input.addEventListener('input', () => { updateRealDuration(); saveSettings(); });
+    input.addEventListener('input', () => {
+      updateRealDuration();
+      if (speedMode === 'fixed') updateFixedSpeed();
+      saveSettings();
+    });
   });
 
   // Handle background running timer finishing
@@ -1064,9 +1178,20 @@
     }
   }, 100);
 
+  // Hide vibrate toggle if not supported (iOS, macOS, desktop browsers)
+  const hasVibrate = navigator.vibrate && /Android/i.test(navigator.userAgent);
+  if (!hasVibrate) {
+    toggleVibrate.style.display = 'none';
+  }
+
   updateUI();
   updateDisplay();
 })();
+
+// Register service worker for PWA
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
 </script>
 </body>
 </html>
