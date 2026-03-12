@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Timer</title>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --primary: #e94560;
+    --primary-glow: rgba(233, 69, 96, 0.3);
+    --text: #eee;
+    --text-dim: #888;
+    --progress-bg: #0f3460;
+    --progress-fill: #e94560;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 420px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .title {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    cursor: default;
+    padding: 8px 16px;
+  }
+
+  .mode-toggle {
+    display: flex;
+    background: var(--surface);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .mode-btn {
+    padding: 10px 28px;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+
+  .mode-btn.active {
+    background: var(--primary);
+    color: white;
+  }
+
+  .time-picker {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .time-picker.hidden { display: none; }
+
+  .picker-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .picker-group label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .picker-group input {
+    width: 72px;
+    padding: 10px;
+    background: var(--surface);
+    border: 2px solid transparent;
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 24px;
+    text-align: center;
+    outline: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .picker-group input:focus {
+    border-color: var(--primary);
+  }
+
+  .picker-sep {
+    font-size: 24px;
+    color: var(--text-dim);
+    padding-top: 18px;
+  }
+
+  .controls {
+    display: flex;
+    gap: 16px;
+  }
+
+  .btn {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .btn:active { transform: scale(0.93); }
+
+  .btn-start {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 4px 20px var(--primary-glow);
+  }
+
+  .btn-pause {
+    background: #f59e0b;
+    color: #000;
+  }
+
+  .btn-reset {
+    background: var(--surface);
+    color: var(--text-dim);
+  }
+
+  /* Alert toggles */
+  .alert-toggles {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .alert-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid transparent;
+    border-radius: 10px;
+    padding: 8px 14px;
+    color: var(--text-dim);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .alert-toggle.active {
+    border-color: var(--primary);
+    color: var(--text);
+  }
+
+  .alert-toggle .icon {
+    font-size: 18px;
+  }
+
+  .sound-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .tone-arrows {
+    display: flex;
+    gap: 8px;
+  }
+
+  .tone-arrows button {
+    background: var(--surface);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 4px 12px;
+    color: var(--text-dim);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tone-arrows button:active {
+    color: var(--text);
+    border-color: var(--primary);
+  }
+
+  /* Speed control */
+  .speed-control {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    padding: 20px 24px 36px;
+    border-radius: 20px 20px 0 0;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 100;
+  }
+
+  .speed-control.visible {
+    transform: translateY(0);
+  }
+
+  .speed-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .speed-header span {
+    font-size: 14px;
+    color: var(--text-dim);
+  }
+
+  .speed-close {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 4px 8px;
+  }
+
+  .speed-slider {
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    background: var(--progress-bg);
+    border-radius: 3px;
+    outline: none;
+  }
+
+  .speed-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--primary);
+    cursor: pointer;
+  }
+
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 99;
+  }
+
+  .overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Mode switch dialog */
+  .dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+  }
+
+  .dialog-overlay.visible {
+    display: flex;
+  }
+
+  .dialog {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 24px;
+    max-width: 300px;
+    width: 90%;
+  }
+
+  .dialog-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .dialog-text {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-bottom: 20px;
+  }
+
+  .dialog-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .dialog-btn {
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .dialog-btn:active { transform: scale(0.97); }
+
+  .dialog-btn-primary {
+    background: var(--primary);
+    color: white;
+  }
+
+  .dialog-btn-secondary {
+    background: var(--progress-bg);
+    color: var(--text);
+  }
+
+  .dialog-btn-cancel {
+    background: none;
+    color: var(--text-dim);
+  }
+
+  /* Done animation */
+  .done-flash {
+    position: fixed;
+    inset: 0;
+    background: var(--primary);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 50;
+  }
+
+  .done-flash.active {
+    animation: flash 0.6s ease-out;
+  }
+
+  @keyframes flash {
+    0% { opacity: 0.6; }
+    100% { opacity: 0; }
+  }
+
+  .done-text {
+    display: none;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--primary);
+    animation: pulse 1s ease-in-out infinite;
+  }
+
+  .done-text.visible { display: block; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .circle-container {
+    position: relative;
+    width: 280px;
+    height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .circle-container.hidden { display: none; }
+
+  .progress-ring {
+    position: absolute;
+    inset: 0;
+    transform: rotate(-90deg);
+  }
+
+  .progress-ring circle {
+    fill: none;
+    stroke-width: 6;
+  }
+
+  .progress-ring .ring-bg {
+    stroke: var(--progress-bg);
+  }
+
+  .progress-ring .ring-fill {
+    stroke: var(--primary);
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.1s linear;
+  }
+
+  .circle-time {
+    font-size: 64px;
+    font-weight: 200;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 2px;
+    z-index: 1;
+  }
+
+  .circle-time .centiseconds {
+    font-size: 28px;
+    color: var(--text-dim);
+  }
+
+  .stopwatch-time {
+    font-size: 72px;
+    font-weight: 200;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 2px;
+    padding: 40px 0;
+  }
+
+  .stopwatch-time .centiseconds {
+    font-size: 32px;
+    color: var(--text-dim);
+  }
+
+  .stopwatch-time.hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="title" id="title">Timer</div>
+
+  <div class="mode-toggle">
+    <button class="mode-btn active" data-mode="countdown">Countdown</button>
+    <button class="mode-btn" data-mode="stopwatch">Stopwatch</button>
+  </div>
+
+  <div class="time-picker" id="timePicker">
+    <div class="picker-group">
+      <label>Hours</label>
+      <input type="number" id="pickH" min="0" max="23" value="0">
+    </div>
+    <span class="picker-sep">:</span>
+    <div class="picker-group">
+      <label>Min</label>
+      <input type="number" id="pickM" min="0" max="59" value="5">
+    </div>
+    <span class="picker-sep">:</span>
+    <div class="picker-group">
+      <label>Sec</label>
+      <input type="number" id="pickS" min="0" max="59" value="0">
+    </div>
+  </div>
+
+  <div class="circle-container hidden" id="circleContainer">
+    <svg class="progress-ring" viewBox="0 0 280 280">
+      <circle class="ring-bg" cx="140" cy="140" r="130"/>
+      <circle class="ring-fill" id="ringFill" cx="140" cy="140" r="130"/>
+    </svg>
+    <div class="circle-time" id="circleTime">00:00<span class="centiseconds">.00</span></div>
+  </div>
+
+  <div class="stopwatch-time hidden" id="stopwatchTime">00:00<span class="centiseconds">.00</span></div>
+
+  <div class="done-text" id="doneText">Time's up!</div>
+
+  <div class="controls">
+    <button class="btn btn-reset" id="btnReset">Reset</button>
+    <button class="btn btn-start" id="btnStart">Start</button>
+  </div>
+
+  <div class="alert-toggles">
+    <div class="sound-group">
+      <button class="alert-toggle active" id="toggleSound">
+        <span class="icon">&#x1F50A;</span> <span id="soundLabel">Beep</span>
+      </button>
+      <div class="tone-arrows">
+        <button id="toggleSoundPrev" title="Previous tone">&#x25C0;</button>
+        <button id="toggleSoundNext" title="Next tone">&#x25B6;</button>
+      </div>
+    </div>
+    <button class="alert-toggle active" id="toggleVibrate">
+      <span class="icon">&#x1F4F3;</span> Vibrate
+    </button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"></div>
+<div class="done-flash" id="doneFlash"></div>
+
+<!-- Mode switch dialog -->
+<div class="dialog-overlay" id="dialogOverlay">
+  <div class="dialog">
+    <div class="dialog-title">Timer is running</div>
+    <div class="dialog-text">What would you like to do with the current timer?</div>
+    <div class="dialog-buttons">
+      <button class="dialog-btn dialog-btn-secondary" id="dialogPause">Pause &amp; switch</button>
+      <button class="dialog-btn dialog-btn-primary" id="dialogContinue">Keep running &amp; switch</button>
+      <button class="dialog-btn dialog-btn-cancel" id="dialogCancel">Cancel timer &amp; switch</button>
+    </div>
+  </div>
+</div>
+
+<div class="speed-control" id="speedControl">
+  <div class="speed-header">
+    <span>Speed adjustment</span>
+    <span id="speedLabel" style="font-size:20px;font-weight:600;color:var(--primary)">1.00&times;</span>
+    <button class="speed-close" id="speedClose">&times;</button>
+  </div>
+  <input type="range" class="speed-slider" id="speedSlider" min="0.5" max="2" step="0.05" value="1">
+  <div id="realDuration" style="margin-top:16px;text-align:center;font-size:14px;color:var(--text-dim)"></div>
+</div>
+
+<script>
+(() => {
+  // Independent state per mode
+  const modeState = {
+    countdown: { state: 'idle', elapsed: 0, totalMs: 0, speed: 1 },
+    stopwatch: { state: 'idle', elapsed: 0, totalMs: 0, speed: 1 }
+  };
+
+  let mode = 'countdown';
+  let lastTick = 0;
+  let rafId = null;
+  // Load persisted settings
+  const saved = (() => {
+    try { return JSON.parse(localStorage.getItem('timerSettings') || '{}'); }
+    catch { return {}; }
+  })();
+  if (saved.countdownSpeed) modeState.countdown.speed = saved.countdownSpeed;
+  if (saved.stopwatchSpeed) modeState.stopwatch.speed = saved.stopwatchSpeed;
+
+  let alertSound = saved.alertSound !== undefined ? saved.alertSound : true;
+  let alertVibrate = saved.alertVibrate !== undefined ? saved.alertVibrate : true;
+  let alertToneIndex = 0;
+  let alertToneUri = saved.alertToneUri || '';
+
+  // Tone list — populated from device on Android, fallback for browser
+  let alertTones = [
+    { name: 'Beep', uri: '', category: 'synth' },
+    { name: 'Chime', uri: '', category: 'synth' },
+    { name: 'Bell', uri: '', category: 'synth' }
+  ];
+
+  // Web Audio synth fallbacks (browser only)
+  const synthTones = {
+    'Beep': ctx => {
+      for (let i = 0; i < 5; i++) {
+        const osc = ctx.createOscillator(); const g = ctx.createGain();
+        osc.connect(g); g.connect(ctx.destination);
+        osc.frequency.value = i % 2 === 0 ? 880 : 1100;
+        osc.type = 'square'; g.gain.value = 0.5;
+        osc.start(ctx.currentTime + i * 0.4);
+        osc.stop(ctx.currentTime + i * 0.4 + 0.25);
+      }
+    },
+    'Chime': ctx => {
+      [523, 659, 784, 1047].forEach((f, i) => {
+        const osc = ctx.createOscillator(); const g = ctx.createGain();
+        osc.connect(g); g.connect(ctx.destination);
+        osc.frequency.value = f; osc.type = 'sine'; g.gain.value = 0.4;
+        g.gain.linearRampToValueAtTime(0, ctx.currentTime + i * 0.3 + 0.5);
+        osc.start(ctx.currentTime + i * 0.3);
+        osc.stop(ctx.currentTime + i * 0.3 + 0.5);
+      });
+    },
+    'Bell': ctx => {
+      for (let i = 0; i < 3; i++) {
+        const osc = ctx.createOscillator(); const g = ctx.createGain();
+        osc.connect(g); g.connect(ctx.destination);
+        osc.frequency.value = 1200; osc.type = 'sine'; g.gain.value = 0.5;
+        g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.6 + 0.5);
+        osc.start(ctx.currentTime + i * 0.6);
+        osc.stop(ctx.currentTime + i * 0.6 + 0.5);
+      }
+    }
+  };
+
+  // Shortcut to current mode's state
+  function ms() { return modeState[mode]; }
+  // Get/set speed for current mode
+  function getSpeed() { return modeState[mode].speed; }
+  function setSpeed(v) { modeState[mode].speed = v; }
+
+  const title = document.getElementById('title');
+  const timePicker = document.getElementById('timePicker');
+  const circleContainer = document.getElementById('circleContainer');
+  const circleTime = document.getElementById('circleTime');
+  const ringFill = document.getElementById('ringFill');
+  const stopwatchTime = document.getElementById('stopwatchTime');
+  const btnStart = document.getElementById('btnStart');
+  const btnReset = document.getElementById('btnReset');
+  const doneText = document.getElementById('doneText');
+  const doneFlash = document.getElementById('doneFlash');
+  const speedControl = document.getElementById('speedControl');
+  const overlay = document.getElementById('overlay');
+  const speedSlider = document.getElementById('speedSlider');
+  const speedClose = document.getElementById('speedClose');
+  const pickH = document.getElementById('pickH');
+  const pickM = document.getElementById('pickM');
+  const pickS = document.getElementById('pickS');
+  const dialogOverlay = document.getElementById('dialogOverlay');
+  const toggleSound = document.getElementById('toggleSound');
+  const toggleVibrate = document.getElementById('toggleVibrate');
+  const soundLabel = document.getElementById('soundLabel');
+  const toggleSoundPrev = document.getElementById('toggleSoundPrev');
+  const toggleSoundNext = document.getElementById('toggleSoundNext');
+
+  const RADIUS = 130;
+  const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+  ringFill.style.strokeDasharray = CIRCUMFERENCE;
+  ringFill.style.strokeDashoffset = 0;
+
+  // Persistence
+  function saveSettings() {
+    try {
+      localStorage.setItem('timerSettings', JSON.stringify({
+        alertSound, alertVibrate,
+        alertToneUri: alertTones[alertToneIndex]?.uri || '',
+        alertToneName: alertTones[alertToneIndex]?.name || '',
+        countdownSpeed: modeState.countdown.speed,
+        stopwatchSpeed: modeState.stopwatch.speed,
+        pickH: parseInt(pickH.value) || 0,
+        pickM: parseInt(pickM.value) || 0,
+        pickS: parseInt(pickS.value) || 0
+      }));
+    } catch {}
+  }
+
+  // Restore saved picker values and UI state
+  if (saved.pickH !== undefined) pickH.value = saved.pickH;
+  if (saved.pickM !== undefined) pickM.value = saved.pickM;
+  if (saved.pickS !== undefined) pickS.value = saved.pickS;
+  toggleSound.classList.toggle('active', alertSound);
+  toggleVibrate.classList.toggle('active', alertVibrate);
+
+  function updateSoundLabel() {
+    if (!alertSound) { soundLabel.textContent = 'Off'; return; }
+    const t = alertTones[alertToneIndex];
+    soundLabel.textContent = t ? t.name : 'Default';
+  }
+  updateSoundLabel();
+
+  // Alert toggles
+  toggleSound.addEventListener('click', () => {
+    alertSound = !alertSound;
+    toggleSound.classList.toggle('active', alertSound);
+    updateSoundLabel();
+    saveSettings();
+  });
+
+  toggleSoundPrev.addEventListener('click', () => {
+    if (AlarmSound) AlarmSound.stop().catch(() => {});
+    alertSound = true;
+    toggleSound.classList.add('active');
+    alertToneIndex = (alertToneIndex - 1 + alertTones.length) % alertTones.length;
+    updateSoundLabel();
+    playAlertSound();
+    saveSettings();
+  });
+
+  toggleSoundNext.addEventListener('click', () => {
+    if (AlarmSound) AlarmSound.stop().catch(() => {});
+    alertSound = true;
+    toggleSound.classList.add('active');
+    alertToneIndex = (alertToneIndex + 1) % alertTones.length;
+    updateSoundLabel();
+    playAlertSound();
+    saveSettings();
+  });
+
+  toggleVibrate.addEventListener('click', () => {
+    alertVibrate = !alertVibrate;
+    toggleVibrate.classList.toggle('active', alertVibrate);
+    saveSettings();
+  });
+
+  // Native plugin for alarm-channel audio (available on Android via Capacitor)
+  const AlarmSound = window.Capacitor?.Plugins?.AlarmSound;
+
+  // Load device tones if native plugin available
+  if (AlarmSound) {
+    AlarmSound.listTones().then(result => {
+      if (result.tones && result.tones.length > 0) {
+        alertTones = result.tones;
+        // Restore saved tone by URI, fall back to name match, then index 0
+        const savedUri = saved.alertToneUri || '';
+        const savedName = saved.alertToneName || '';
+        let idx = alertTones.findIndex(t => t.uri === savedUri);
+        if (idx < 0) idx = alertTones.findIndex(t => t.name === savedName);
+        if (idx < 0) idx = 0;
+        alertToneIndex = idx;
+        updateSoundLabel();
+      }
+    }).catch(() => {});
+  } else {
+    // Browser: restore by name
+    const savedName = saved.alertToneName || '';
+    const idx = alertTones.findIndex(t => t.name === savedName);
+    if (idx >= 0) alertToneIndex = idx;
+  }
+
+  // Web Audio fallback for browser testing
+  let sharedAudioCtx = null;
+  function getAudioCtx() {
+    if (!sharedAudioCtx) sharedAudioCtx = new AudioContext();
+    if (sharedAudioCtx.state === 'suspended') sharedAudioCtx.resume();
+    return sharedAudioCtx;
+  }
+  document.addEventListener('click', () => getAudioCtx(), { once: true });
+
+  function playAlertSound() {
+    const tone = alertTones[alertToneIndex];
+    if (AlarmSound) {
+      // Use native alarm channel with ringtone URI
+      AlarmSound.play({ uri: tone.uri || '' }).catch(() => {});
+    } else {
+      // Fallback to Web Audio synth (browser)
+      try {
+        const fn = synthTones[tone.name];
+        if (fn) { fn(getAudioCtx()); }
+      } catch(e) {}
+    }
+  }
+
+  // Fire alerts respecting ringer mode
+  async function fireAlerts() {
+    if (AlarmSound) {
+      try {
+        const { mode } = await AlarmSound.getRingerMode();
+        if (alertVibrate && mode !== 'silent' && navigator.vibrate) {
+          navigator.vibrate([400, 200, 400, 200, 400, 200, 400]);
+        }
+        if (alertSound && mode === 'normal') {
+          playAlertSound();
+        }
+      } catch {
+        // Fallback if native call fails
+        if (alertVibrate && navigator.vibrate) navigator.vibrate([400, 200, 400, 200, 400, 200, 400]);
+        if (alertSound) playAlertSound();
+      }
+    } else {
+      // Browser fallback — no ringer mode concept
+      if (alertVibrate && navigator.vibrate) navigator.vibrate([400, 200, 400, 200, 400, 200, 400]);
+      if (alertSound) playAlertSound();
+    }
+  }
+
+  function fmt(msVal) {
+    const totalSec = Math.max(0, Math.floor(msVal / 1000));
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    const cs = Math.floor((Math.max(0, msVal) % 1000) / 10);
+    const pad = n => String(n).padStart(2, '0');
+    if (h > 0) {
+      return `${h}:${pad(m)}:${pad(s)}<span class="centiseconds">.${pad(cs)}</span>`;
+    }
+    return `${pad(m)}:${pad(s)}<span class="centiseconds">.${pad(cs)}</span>`;
+  }
+
+  function updateDisplay() {
+    const s = ms();
+    if (mode === 'countdown') {
+      const remaining = Math.max(0, s.totalMs - s.elapsed);
+      circleTime.innerHTML = fmt(remaining);
+      const fraction = s.totalMs > 0 ? s.elapsed / s.totalMs : 0;
+      const offset = CIRCUMFERENCE * (1 - Math.min(1, fraction));
+      ringFill.style.strokeDashoffset = offset;
+    } else {
+      stopwatchTime.innerHTML = fmt(s.elapsed);
+    }
+  }
+
+  function tick(now) {
+    const s = ms();
+    if (s.state !== 'running') return;
+
+    const delta = now - lastTick;
+    lastTick = now;
+    s.elapsed += delta * getSpeed();
+
+    if (mode === 'countdown' && s.elapsed >= s.totalMs) {
+      s.elapsed = s.totalMs;
+      updateDisplay();
+      finish();
+      return;
+    }
+
+    updateDisplay();
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function start() {
+    const s = ms();
+    if (mode === 'countdown' && s.state === 'idle') {
+      const h = parseInt(pickH.value) || 0;
+      const m = parseInt(pickM.value) || 0;
+      const sec = parseInt(pickS.value) || 0;
+      s.totalMs = (h * 3600 + m * 60 + sec) * 1000;
+      if (s.totalMs <= 0) return;
+      s.elapsed = 0;
+    }
+
+    s.state = 'running';
+    lastTick = performance.now();
+    rafId = requestAnimationFrame(tick);
+    updateUI();
+  }
+
+  function pause() {
+    ms().state = 'paused';
+    cancelAnimationFrame(rafId);
+    updateUI();
+  }
+
+  function reset() {
+    const s = ms();
+    s.state = 'idle';
+    s.elapsed = 0;
+    cancelAnimationFrame(rafId);
+    doneText.classList.remove('visible');
+    updateDisplay();
+    updateUI();
+  }
+
+  function finish() {
+    const s = ms();
+    s.state = 'done';
+    cancelAnimationFrame(rafId);
+    doneText.classList.add('visible');
+    doneFlash.classList.add('active');
+    setTimeout(() => doneFlash.classList.remove('active'), 600);
+
+    fireAlerts();
+
+    updateUI();
+  }
+
+  function updateUI() {
+    const s = ms();
+    const isCountdown = mode === 'countdown';
+
+    timePicker.classList.toggle('hidden', !isCountdown || s.state !== 'idle');
+    circleContainer.classList.toggle('hidden', !isCountdown || s.state === 'idle');
+    stopwatchTime.classList.toggle('hidden', isCountdown);
+    doneText.classList.toggle('visible', s.state === 'done' && isCountdown);
+
+    // Hide alert toggles in stopwatch mode
+    document.querySelector('.alert-toggles').style.display = isCountdown ? 'flex' : 'none';
+
+    if (s.state === 'idle' || s.state === 'done') {
+      btnStart.textContent = 'Start';
+      btnStart.className = 'btn btn-start';
+    } else if (s.state === 'running') {
+      btnStart.textContent = 'Pause';
+      btnStart.className = 'btn btn-pause';
+    } else if (s.state === 'paused') {
+      btnStart.textContent = 'Resume';
+      btnStart.className = 'btn btn-start';
+    }
+  }
+
+  // Button handlers
+  btnStart.addEventListener('click', () => {
+    const s = ms();
+    if (s.state === 'running') pause();
+    else if (s.state === 'done') { reset(); start(); }
+    else start();
+  });
+
+  btnReset.addEventListener('click', reset);
+
+  // Mode toggle with dialog for running timers
+  let pendingMode = null;
+
+  function switchMode(newMode) {
+    // Stop the RAF if active mode is running (it will keep running in background state)
+    const oldState = modeState[mode];
+    if (oldState.state === 'running') {
+      cancelAnimationFrame(rafId);
+      // Store how far we got so we can resume
+    }
+
+    mode = newMode;
+    document.querySelectorAll('.mode-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.mode === mode);
+    });
+
+    const s = ms();
+    // If new mode is running, resume the tick
+    if (s.state === 'running') {
+      lastTick = performance.now();
+      rafId = requestAnimationFrame(tick);
+    }
+
+    // Sync speed slider to new mode's speed
+    speedSlider.value = getSpeed();
+    updateSpeedLabel();
+
+    doneText.classList.remove('visible');
+    updateRealDuration();
+    updateUI();
+    updateDisplay();
+  }
+
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const newMode = btn.dataset.mode;
+      if (newMode === mode) return;
+
+      const currentState = modeState[mode].state;
+
+      // If current mode is running, show dialog
+      if (currentState === 'running') {
+        pendingMode = newMode;
+        dialogOverlay.classList.add('visible');
+        return;
+      }
+
+      // If paused or idle or done, just switch (paused stays paused)
+      switchMode(newMode);
+    });
+  });
+
+  // Dialog buttons
+  document.getElementById('dialogPause').addEventListener('click', () => {
+    modeState[mode].state = 'paused';
+    cancelAnimationFrame(rafId);
+    dialogOverlay.classList.remove('visible');
+    switchMode(pendingMode);
+  });
+
+  document.getElementById('dialogContinue').addEventListener('click', () => {
+    // Keep running in background — store elapsed based on current time
+    cancelAnimationFrame(rafId);
+    dialogOverlay.classList.remove('visible');
+    // The state stays 'running', switchMode will resume the new mode's tick if needed
+    switchMode(pendingMode);
+  });
+
+  document.getElementById('dialogCancel').addEventListener('click', () => {
+    const s = modeState[mode];
+    s.state = 'idle';
+    s.elapsed = 0;
+    cancelAnimationFrame(rafId);
+    dialogOverlay.classList.remove('visible');
+    switchMode(pendingMode);
+  });
+
+  // Triple-tap title to show speed control
+  let tapCount = 0;
+  let tapTimer = null;
+  title.addEventListener('click', () => {
+    tapCount++;
+    clearTimeout(tapTimer);
+    tapTimer = setTimeout(() => { tapCount = 0; }, 500);
+    if (tapCount >= 3) {
+      tapCount = 0;
+      showSpeed();
+    }
+  });
+
+  function showSpeed() {
+    speedSlider.value = getSpeed();
+    updateSpeedLabel();
+    updateRealDuration();
+    speedControl.classList.add('visible');
+    overlay.classList.add('visible');
+  }
+
+  function hideSpeed() {
+    speedControl.classList.remove('visible');
+    overlay.classList.remove('visible');
+  }
+
+  speedClose.addEventListener('click', hideSpeed);
+  overlay.addEventListener('click', hideSpeed);
+
+  speedSlider.addEventListener('input', () => {
+    setSpeed(parseFloat(speedSlider.value));
+    updateSpeedLabel();
+    saveSettings();
+  });
+
+  function updateSpeedLabel() {
+    document.getElementById('speedLabel').textContent = getSpeed().toFixed(2) + '\u00d7';
+    updateRealDuration();
+  }
+
+  function updateRealDuration() {
+    const el = document.getElementById('realDuration');
+    if (mode !== 'countdown') {
+      el.textContent = '';
+      return;
+    }
+    const h = parseInt(pickH.value) || 0;
+    const m = parseInt(pickM.value) || 0;
+    const s = parseInt(pickS.value) || 0;
+    const setSeconds = h * 3600 + m * 60 + s;
+    if (setSeconds <= 0) {
+      el.textContent = '';
+      return;
+    }
+    const realSeconds = Math.round(setSeconds / getSpeed());
+    const rh = Math.floor(realSeconds / 3600);
+    const rm = Math.floor((realSeconds % 3600) / 60);
+    const rs = realSeconds % 60;
+    const pad = n => String(n).padStart(2, '0');
+    const timeStr = rh > 0 ? `${rh}:${pad(rm)}:${pad(rs)}` : `${rm}:${pad(rs)}`;
+    el.innerHTML = `Real time will be <span style="color:var(--primary);font-weight:600">${timeStr}</span>`;
+  }
+
+  [pickH, pickM, pickS].forEach(input => {
+    input.addEventListener('focus', () => input.select());
+    input.addEventListener('input', () => { updateRealDuration(); saveSettings(); });
+  });
+
+  // Handle background running timer finishing
+  // When a countdown is "running" but not the active mode, we need to track it
+  // We'll use a setInterval to check background timers
+  let bgCheckInterval = setInterval(() => {
+    for (const m of ['countdown', 'stopwatch']) {
+      if (m === mode) continue; // active mode uses rAF
+      const s = modeState[m];
+      if (s.state !== 'running') continue;
+      // Approximate: advance by interval * speed
+      s.elapsed += 100 * s.speed;
+      if (m === 'countdown' && s.elapsed >= s.totalMs) {
+        s.elapsed = s.totalMs;
+        s.state = 'done';
+        // Fire alerts even if not viewing this mode
+        fireAlerts();
+      }
+    }
+  }, 100);
+
+  updateUI();
+  updateDisplay();
+})();
+</script>
+</body>
+</html>

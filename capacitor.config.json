@@ -1,0 +1,11 @@
+{
+  "appId": "com.steelgarden.timer",
+  "appName": "Parenting Timer",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#1a1a2e"
+  }
+}
