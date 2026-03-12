@@ -1,7 +1,8 @@
 {
   "name": "Parenting Timer",
   "short_name": "Timer",
-  "start_url": "./",
+  "start_url": "/parenting-timer/",
+  "scope": "/parenting-timer/",
   "display": "standalone",
   "background_color": "#1a1a2e",
   "theme_color": "#1a1a2e",
