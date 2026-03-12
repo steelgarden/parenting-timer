@@ -1069,8 +1069,9 @@
     }
   }, 100);
 
-  // Hide vibrate toggle if not supported (iOS)
-  if (!navigator.vibrate) {
+  // Hide vibrate toggle if not supported (iOS, macOS, desktop browsers)
+  const hasVibrate = navigator.vibrate && /Android/i.test(navigator.userAgent);
+  if (!hasVibrate) {
     toggleVibrate.style.display = 'none';
   }
 
