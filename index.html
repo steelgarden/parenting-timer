@@ -582,14 +582,26 @@
     </div>
     <div id="fixedInfo" style="margin-top:12px;font-size:13px;color:var(--text-dim);"></div>
   </div>
+  <div id="realtimePanel" style="margin-top:14px;border-top:1px solid var(--progress-bg);padding-top:14px;">
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-dim);cursor:pointer;">
+      <input type="checkbox" id="realtimeToggle" style="accent-color:var(--primary);width:18px;height:18px;"> Realtime when visible
+    </label>
+    <div id="maxSpeedRow" style="display:none;margin-top:10px;align-items:center;gap:8px;">
+      <span style="font-size:13px;color:var(--text-dim);">Max background speed:</span>
+      <input type="number" id="maxBgSpeedInput" min="0.1" max="10" step="0.05" value="1.0" style="width:65px;text-align:center;background:var(--bg);border:1px solid var(--text-dim);border-radius:8px;color:var(--text);font-size:16px;padding:6px;">
+      <span style="font-size:13px;color:var(--text-dim);">&times;</span>
+    </div>
+    <div id="realtimeInfo" style="margin-top:8px;font-size:12px;color:var(--text-dim);"></div>
+  </div>
+  <div style="position:fixed;bottom:4px;right:8px;font-size:11px;color:var(--text-dim);opacity:0.5;">v1.2</div>
 </div>
 
 <script>
 (() => {
   // Independent state per mode
   const modeState = {
-    countdown: { state: 'idle', elapsed: 0, totalMs: 0, speed: 1 },
-    stopwatch: { state: 'idle', elapsed: 0, totalMs: 0, speed: 1 }
+    countdown: { state: 'idle', elapsed: 0, totalMs: 0, speed: 1, realUnpaused: 0, maxBgSpeed: 1 },
+    stopwatch: { state: 'idle', elapsed: 0, totalMs: 0, speed: 1, realUnpaused: 0, maxBgSpeed: 1 }
   };
 
   let mode = 'countdown';
@@ -602,6 +614,11 @@
   })();
   if (saved.countdownSpeed) modeState.countdown.speed = saved.countdownSpeed;
   if (saved.stopwatchSpeed) modeState.stopwatch.speed = saved.stopwatchSpeed;
+  modeState.countdown.maxBgSpeed = saved.countdownMaxBgSpeed || Math.max(0.1, 2 * modeState.countdown.speed - 1);
+  modeState.stopwatch.maxBgSpeed = saved.stopwatchMaxBgSpeed || Math.max(0.1, 2 * modeState.stopwatch.speed - 1);
+  // clampMaxBgSpeed defined later, so defer enforcement to first showSpeed/updateRealtimeUI call
+
+  let realtimeVisible = saved.realtimeVisible || false;
 
   let alertSound = saved.alertSound !== undefined ? saved.alertSound : true;
   let alertVibrate = saved.alertVibrate !== undefined ? saved.alertVibrate : true;
@@ -698,7 +715,10 @@
         pickS: parseInt(pickS.value) || 0,
         speedMode,
         fixedM: parseInt(fixedM?.value) || 0,
-        fixedS: parseInt(fixedS?.value) || 0
+        fixedS: parseInt(fixedS?.value) || 0,
+        realtimeVisible,
+        countdownMaxBgSpeed: modeState.countdown.maxBgSpeed,
+        stopwatchMaxBgSpeed: modeState.stopwatch.maxBgSpeed
       }));
     } catch {}
   }
@@ -854,7 +874,13 @@
 
     const delta = now - lastTick;
     lastTick = now;
-    s.elapsed += delta * getSpeed();
+    s.realUnpaused += delta;
+
+    if (realtimeVisible && s.speed !== 1) {
+      s.elapsed += delta; // 1x when visible
+    } else {
+      s.elapsed += delta * getSpeed();
+    }
 
     if (mode === 'countdown' && s.elapsed >= s.totalMs) {
       s.elapsed = s.totalMs;
@@ -869,6 +895,7 @@
 
   function start() {
     const s = ms();
+    if (s.state === 'idle') s.realUnpaused = 0;
     if (mode === 'countdown' && s.state === 'idle') {
       const h = parseInt(pickH.value) || 0;
       const m = parseInt(pickM.value) || 0;
@@ -896,6 +923,7 @@
     const s = ms();
     s.state = 'idle';
     s.elapsed = 0;
+    s.realUnpaused = 0;
     cancelAnimationFrame(rafId);
     doneText.classList.remove('visible');
     updateDisplay();
@@ -978,6 +1006,7 @@
 
     doneText.classList.remove('visible');
     updateRealDuration();
+    updateRealtimeUI();
     updateUI();
     updateDisplay();
   }
@@ -1044,6 +1073,7 @@
     updateSpeedLabel();
     updateRealDuration();
     updateSpeedModeUI();
+    updateRealtimeUI();
     speedControl.classList.add('visible');
     overlay.classList.add('visible');
   }
@@ -1100,15 +1130,17 @@
       fixedInfo.textContent = 'Set both countdown and real time';
       return;
     }
+    const oldSpeed = getSpeed();
     const ratio = childSec / fixedSec;
-    // Clamp to reasonable range
     if (ratio < 0.1 || ratio > 10) {
       fixedInfo.innerHTML = `Speed would be <span style="color:var(--primary)">${ratio.toFixed(2)}&times;</span> — too extreme`;
       return;
     }
     setSpeed(ratio);
+    updateMaxBgSpeedFromSpeedChange(oldSpeed, ratio);
     document.getElementById('speedLabel').textContent = ratio.toFixed(2) + '\u00d7';
     fixedInfo.innerHTML = `Speed auto-set to <span style="color:var(--primary)">${ratio.toFixed(2)}&times;</span>`;
+    updateRealtimeUI();
   }
 
   [fixedM, fixedS].forEach(input => {
@@ -1116,9 +1148,58 @@
     input.addEventListener('input', () => { updateFixedSpeed(); saveSettings(); });
   });
 
+  // Enforce: maxBgSpeed must be at least as far from 1 as speed is, on the same side
+  function clampMaxBgSpeed(speed, maxBg) {
+    if (speed >= 1) return Math.max(speed, maxBg);
+    return Math.min(speed, maxBg);
+  }
+
+  function updateMaxBgSpeedFromSpeedChange(oldSpeed, newSpeed) {
+    const s = ms();
+    if (Math.abs(oldSpeed - 1) < 0.001) {
+      s.maxBgSpeed = Math.max(0.1, 2 * newSpeed - 1);
+    } else {
+      const k = (s.maxBgSpeed - 1) / (oldSpeed - 1);
+      s.maxBgSpeed = Math.max(0.1, Math.min(10, 1 + k * (newSpeed - 1)));
+    }
+    s.maxBgSpeed = clampMaxBgSpeed(newSpeed, s.maxBgSpeed);
+  }
+
+  function updateRealtimeUI() {
+    const toggle = document.getElementById('realtimeToggle');
+    const maxRow = document.getElementById('maxSpeedRow');
+    const maxInput = document.getElementById('maxBgSpeedInput');
+    const info = document.getElementById('realtimeInfo');
+    toggle.checked = realtimeVisible;
+    maxRow.style.display = realtimeVisible ? 'flex' : 'none';
+    // Enforce: maxBgSpeed must be at least as far from 1 as speed
+    ms().maxBgSpeed = clampMaxBgSpeed(ms().speed, ms().maxBgSpeed);
+    maxInput.value = ms().maxBgSpeed.toFixed(2);
+
+    if (realtimeVisible && ms().speed !== 1) {
+      const spd = ms().speed;
+      const maxSpd = ms().maxBgSpeed;
+      // Calculate what % of time must be in background to achieve target speed
+      // f*1 + (1-f)*maxSpd = spd → f = (maxSpd - spd) / (maxSpd - 1)
+      if (Math.abs(maxSpd - 1) > 0.001) {
+        const f = (maxSpd - spd) / (maxSpd - 1);
+        const pct = Math.round(Math.max(0, Math.min(100, (1 - f) * 100)));
+        info.textContent = `Needs ~${pct}% background time to maintain ${spd.toFixed(2)}× average`;
+      } else {
+        info.textContent = '';
+      }
+    } else {
+      info.textContent = '';
+    }
+  }
+
   speedSlider.addEventListener('input', () => {
-    setSpeed(parseFloat(speedSlider.value));
+    const oldSpeed = getSpeed();
+    const newSpeed = parseFloat(speedSlider.value);
+    setSpeed(newSpeed);
+    updateMaxBgSpeedFromSpeedChange(oldSpeed, newSpeed);
     updateSpeedLabel();
+    updateRealtimeUI();
     saveSettings();
   });
 
@@ -1157,6 +1238,139 @@
       if (speedMode === 'fixed') updateFixedSpeed();
       saveSettings();
     });
+  });
+
+  // Realtime-when-visible controls
+  document.getElementById('realtimeToggle').addEventListener('change', (e) => {
+    realtimeVisible = e.target.checked;
+    const s = ms();
+    if (realtimeVisible && s.speed !== 1) {
+      s.maxBgSpeed = clampMaxBgSpeed(s.speed, s.maxBgSpeed);
+      if (Math.abs(s.maxBgSpeed - s.speed) < 0.01) {
+        s.maxBgSpeed = Math.max(0.1, 2 * s.speed - 1);
+      }
+    }
+    updateRealtimeUI();
+    saveSettings();
+  });
+
+  const maxBgSpeedInput = document.getElementById('maxBgSpeedInput');
+  maxBgSpeedInput.addEventListener('focus', function() { this.select(); });
+  maxBgSpeedInput.addEventListener('input', () => {
+    const val = parseFloat(maxBgSpeedInput.value);
+    if (!isNaN(val) && val > 0) {
+      ms().maxBgSpeed = clampMaxBgSpeed(ms().speed, Math.max(0.1, Math.min(10, val)));
+      updateRealtimeUI();
+      saveSettings();
+    }
+  });
+
+  // Visibility change: catch up when returning from background
+  // Use Date.now() not performance.now() — performance.now() pauses during device sleep
+  let hiddenSince = 0;
+
+  function advanceAfterHidden(s, D) {
+    s.realUnpaused += D;
+
+    if (!realtimeVisible || s.speed === 1) {
+      s.elapsed += D * s.speed;
+      return;
+    }
+
+    // Two candidate positions after hidden period:
+    // 1) Max speed position: what we'd reach running at maxBgSpeed the whole time
+    const atMaxSpeed = s.elapsed + D * s.maxBgSpeed;
+    // 2) Ideal target: where elapsed should be based on total real unpaused time × speed
+    const idealTarget = s.realUnpaused * s.speed;
+
+    // Take the more conservative position (less progressed), but never go backwards
+    s.elapsed = Math.max(s.elapsed, Math.min(atMaxSpeed, idealTarget));
+  }
+
+  let bgFinishTimer = null;
+
+  function scheduleBgFinish() {
+    clearTimeout(bgFinishTimer);
+    bgFinishTimer = null;
+
+    // Only schedule for countdown timers
+    for (const m of ['countdown', 'stopwatch']) {
+      const s = modeState[m];
+      if (s.state !== 'running' || m !== 'countdown') continue;
+
+      const remaining = s.totalMs - s.elapsed;
+      if (remaining <= 0) continue;
+
+      // Time to finish at max bg speed (if realtime mode) or regular speed
+      const bgSpeed = (realtimeVisible && s.speed !== 1) ? s.maxBgSpeed : s.speed;
+      const msToFinishAtMaxSpeed = remaining / bgSpeed;
+
+      // Time to finish based on target schedule: totalMs / speed is total real time,
+      // minus realUnpaused already spent
+      const idealRealRemaining = (s.totalMs / s.speed) - s.realUnpaused;
+
+      // Use the later of the two (the one that takes longer)
+      const realMsToFinish = Math.max(msToFinishAtMaxSpeed, idealRealRemaining);
+
+      if (realMsToFinish > 0 && realMsToFinish < 86400000) {
+        bgFinishTimer = setTimeout(() => {
+          s.elapsed = s.totalMs;
+          s.realUnpaused += realMsToFinish;
+          if (m === mode) {
+            updateDisplay();
+            finish();
+          } else {
+            s.state = 'done';
+            fireAlerts();
+          }
+        }, realMsToFinish);
+      }
+    }
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      hiddenSince = Date.now();
+      if (ms().state === 'running') cancelAnimationFrame(rafId);
+      // Schedule background finish
+      scheduleBgFinish();
+    } else if (hiddenSince > 0) {
+      clearTimeout(bgFinishTimer);
+      bgFinishTimer = null;
+      const D = Date.now() - hiddenSince;
+
+      // Advance active mode
+      const s = ms();
+      if (s.state === 'running') {
+        advanceAfterHidden(s, D);
+        if (mode === 'countdown' && s.elapsed >= s.totalMs) {
+          s.elapsed = s.totalMs;
+          updateDisplay();
+          finish();
+          hiddenSince = 0;
+          return;
+        }
+        lastTick = performance.now();
+        rafId = requestAnimationFrame(tick);
+      }
+
+      // Advance non-active running timers
+      for (const m of ['countdown', 'stopwatch']) {
+        if (m === mode) continue;
+        const bg = modeState[m];
+        if (bg.state !== 'running') continue;
+        bg.realUnpaused += D;
+        bg.elapsed += D * bg.speed;
+        if (m === 'countdown' && bg.elapsed >= bg.totalMs) {
+          bg.elapsed = bg.totalMs;
+          bg.state = 'done';
+          fireAlerts();
+        }
+      }
+
+      hiddenSince = 0;
+      updateDisplay();
+    }
   });
 
   // Handle background running timer finishing
