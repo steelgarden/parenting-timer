@@ -480,6 +480,50 @@
   }
 
   .stopwatch-time.hidden { display: none; }
+
+  /* Help modal */
+  #helpModal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #helpModal.visible { display: block; }
+  #helpModalContent {
+    background: var(--surface);
+    margin: 20px auto;
+    max-width: 420px;
+    padding: 20px;
+    border-radius: 16px;
+    line-height: 1.6;
+  }
+  #helpModalContent h1 { font-size: 20px; margin-bottom: 4px; }
+  #helpModalContent h2 { font-size: 15px; margin-top: 24px; color: var(--primary); }
+  #helpModalContent h3 { font-size: 14px; margin-top: 16px; color: var(--text); }
+  #helpModalContent p, #helpModalContent li { font-size: 14px; color: #ccc; margin-top: 6px; }
+  #helpModalContent ul { padding-left: 18px; }
+  #helpModalContent .note {
+    background: rgba(233,69,96,0.1);
+    border-left: 3px solid var(--primary);
+    padding: 8px 12px;
+    border-radius: 0 8px 8px 0;
+    margin: 12px 0;
+  }
+  #helpModalContent .note p { margin: 0; }
+  #helpClose {
+    display: block;
+    margin: 20px auto 0;
+    padding: 10px 32px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    font-size: 15px;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -594,7 +638,7 @@
     <div id="realtimeInfo" style="margin-top:8px;font-size:12px;color:var(--text-dim);"></div>
   </div>
   <div style="margin-top:16px;border-top:1px solid var(--progress-bg);padding-top:12px;text-align:center;">
-    <a href="https://steelgarden.github.io/parenting-timer/support.html" target="_blank" style="font-size:12px;color:var(--text-dim);text-decoration:none;opacity:0.7;">Help &amp; documentation</a>
+    <a href="#" id="helpLink" style="font-size:12px;color:var(--text-dim);text-decoration:none;opacity:0.7;">Help &amp; documentation</a>
   </div>
   <div style="position:fixed;bottom:4px;right:8px;font-size:11px;color:var(--text-dim);opacity:0.5;">v1.2</div>
 </div>
@@ -1434,6 +1478,72 @@
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
+
+// Help modal
+document.getElementById('helpLink').addEventListener('click', e => {
+  e.preventDefault();
+  document.getElementById('helpModal').classList.add('visible');
+});
+document.getElementById('helpClose').addEventListener('click', () => {
+  document.getElementById('helpModal').classList.remove('visible');
+});
+document.getElementById('helpModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('visible');
+});
 </script>
+
+<div id="helpModal">
+  <div id="helpModalContent">
+    <h1>Parenting Timer</h1>
+    <p style="font-size:13px;color:#888;margin-bottom:8px;">Help &amp; Documentation</p>
+
+    <h2>Basic Use</h2>
+    <p>Select <strong>Countdown</strong> or <strong>Stopwatch</strong> at the top. Each mode has its own independent settings.</p>
+
+    <h3>Countdown</h3>
+    <p>Set the duration using the +/− buttons or by tapping the time display to type directly. Tap Start to begin. The progress bar drains as time elapses. When it reaches zero, the alarm sounds.</p>
+
+    <h3>Stopwatch</h3>
+    <p>Tap Start to begin counting up. The progress bar fills up to the target duration. Tap Stop to pause, or Reset to start over.</p>
+
+    <h2>The Hidden Speed Control</h2>
+    <p>Tap the word "Timer" in the app title three times to reveal the speed control panel. This panel is not visible during normal use.</p>
+    <p>The speed multiplier controls how fast the timer runs relative to real time:</p>
+    <ul>
+      <li><strong>1.0×</strong> — normal speed</li>
+      <li><strong>2.0×</strong> — twice as fast (10 min countdown finishes in 5 real minutes)</li>
+      <li><strong>0.5×</strong> — half speed (10 min countdown takes 20 real minutes)</li>
+    </ul>
+    <div class="note"><p>The display always counts in "timer minutes". At 2×, a 10:00 countdown reaches 0:00 in 5 real minutes.</p></div>
+
+    <h2>Speed Modes</h2>
+
+    <h3>Ratio mode</h3>
+    <p>Set the speed multiplier directly. The timer runs at that fixed multiple of real time.</p>
+
+    <h3>Fixed time mode (countdown only)</h3>
+    <p>Set both the displayed duration and the real time you want it to take. The speed is calculated automatically. For example: display 10 min, finish in 8 real min → speed set to 1.25×.</p>
+    <p>Useful for setting the speed before negotiating with children — decide the real duration, configure it in the hidden panel, then close the panel and show the child the displayed time.</p>
+
+    <h2>Realtime When Visible</h2>
+    <p>When enabled, the timer runs at normal speed (1×) while you are looking at the screen, and catches up in the background.</p>
+    <p>A child watching the timer will see it tick at normal pace. When the screen is off, the timer catches up toward the target speed.</p>
+
+    <h3>Max background speed</h3>
+    <p>The maximum speed used during background catch-up. Must be at least as far from 1× as the target speed. The catch-up never jumps ahead of the ideal target position.</p>
+
+    <h2>Alert Settings</h2>
+    <p>Tap the bell icon to configure alerts when the timer finishes:</p>
+    <ul>
+      <li><strong>Sound</strong> — plays the selected alert tone once</li>
+      <li><strong>Vibrate</strong> — vibrates the device</li>
+    </ul>
+
+    <h2>Contact</h2>
+    <p>For help or bug reports: <a href="mailto:timer@steelgarden.com" style="color:var(--primary);">timer@steelgarden.com</a></p>
+
+    <button id="helpClose">Close</button>
+  </div>
+</div>
 </body>
 </html>
