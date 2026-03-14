@@ -488,12 +488,12 @@
     inset: 0;
     background: rgba(0,0,0,0.7);
     z-index: 100;
-    overflow-y: auto;
+    overflow-y: scroll;
     -webkit-overflow-scrolling: touch;
+    height: 100dvh;
   }
   #helpModal.visible { display: block; }
   #helpModalContent {
-    position: relative;
     background: var(--surface);
     margin: 20px auto;
     max-width: 420px;
@@ -515,15 +515,14 @@
   }
   #helpModalContent .note p { margin: 0; }
   #helpClose {
-    position: absolute;
-    top: 12px;
-    right: 16px;
-    padding: 4px 10px;
-    background: none;
-    color: var(--text-dim);
+    display: block;
+    margin: 24px auto 0;
+    padding: 10px 32px;
+    background: var(--primary);
+    color: #fff;
     border: none;
-    font-size: 22px;
-    line-height: 1;
+    border-radius: 20px;
+    font-size: 15px;
     cursor: pointer;
   }
 </style>
@@ -1492,11 +1491,20 @@ document.getElementById('helpClose').addEventListener('click', () => {
 document.getElementById('helpModal').addEventListener('click', e => {
   if (e.target === e.currentTarget) e.currentTarget.classList.remove('visible');
 });
+(function() {
+  let touchStartX = 0;
+  const modal = document.getElementById('helpModal');
+  modal.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  modal.addEventListener('touchend', e => {
+    if (e.changedTouches[0].clientX - touchStartX > 60) {
+      modal.classList.remove('visible');
+    }
+  }, { passive: true });
+})();
 </script>
 
 <div id="helpModal">
   <div id="helpModalContent">
-    <button id="helpClose">&#x2715;</button>
     <h1>Parenting Timer</h1>
     <p style="font-size:13px;color:#888;margin-bottom:8px;">Help &amp; Documentation</p>
 
@@ -1542,9 +1550,24 @@ document.getElementById('helpModal').addEventListener('click', e => {
       <li><strong>Vibrate</strong> — vibrates the device</li>
     </ul>
 
+    <h2>Frequently Asked Questions</h2>
+
+    <h3>Does the timer work when the screen is off?</h3>
+    <p>Yes. The timer continues in the background and the alarm will fire even if the screen is off.</p>
+
+    <h3>Does it work offline?</h3>
+    <p>Yes, completely. The app requires no internet connection.</p>
+
+    <h3>Is my data private?</h3>
+    <p>The app collects no data other than your saved settings, which stay on your device.</p>
+
+    <h3>Why does the timer sometimes seem slightly off when I unlock my phone?</h3>
+    <p>If "Realtime when visible" is enabled, the timer may be mid-catch-up when you return. It will settle to the correct position shortly.</p>
+
     <h2>Contact</h2>
     <p>For help or bug reports: <a href="mailto:timer@steelgarden.com" style="color:var(--primary);">timer@steelgarden.com</a></p>
 
+    <button id="helpClose">Close</button>
   </div>
 </div>
 </body>
