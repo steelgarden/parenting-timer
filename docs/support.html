@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Support — Parenting Timer</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 24px 20px;
+    line-height: 1.6;
+  }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  h2 { font-size: 17px; margin-top: 28px; color: #e94560; }
+  h3 { font-size: 15px; margin-top: 20px; color: #eee; }
+  p, li { font-size: 15px; color: #ccc; }
+  a { color: #e94560; }
+  .subtitle { font-size: 13px; color: #888; margin-bottom: 28px; }
+  code {
+    background: #2a2a4a;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .note {
+    background: #2a2a4a;
+    border-left: 3px solid #e94560;
+    padding: 10px 14px;
+    border-radius: 0 8px 8px 0;
+    margin: 16px 0;
+  }
+  .note p { margin: 0; font-size: 14px; }
+</style>
+</head>
+<body>
+<h1>Parenting Timer</h1>
+<p class="subtitle">Support &amp; Documentation &mdash; v1.2</p>
+
+<h2>Overview</h2>
+<p>Parenting Timer is a countdown timer and stopwatch with an adjustable speed control, designed for parents who want a little flexibility when negotiating time with children. You can agree on a time together, then secretly run the timer faster or slower than real time.</p>
+
+<h2>Basic Use</h2>
+<p>The app has two modes, selectable at the top: <strong>Countdown</strong> and <strong>Stopwatch</strong>. Each mode has its own independent settings.</p>
+
+<h3>Countdown</h3>
+<p>Set the duration using the +/− buttons or by tapping the time display to type directly. Tap Start to begin. The progress bar drains as time elapses. When it reaches zero, the alarm sounds.</p>
+
+<h3>Stopwatch</h3>
+<p>Tap Start to begin counting up. The progress bar fills up to the target duration. Tap Stop to pause, or Reset to start over.</p>
+
+<h2>The Hidden Speed Control</h2>
+<p>Tap the small arrow or gear icon at the bottom of the screen to reveal the speed control panel. This panel is not visible during normal use.</p>
+
+<p>The speed multiplier controls how fast the timer runs relative to real time:</p>
+<ul>
+  <li><strong>1.0×</strong> — normal speed (real time)</li>
+  <li><strong>2.0×</strong> — twice as fast (a 10-minute countdown finishes in 5 real minutes)</li>
+  <li><strong>0.5×</strong> — half speed (a 10-minute countdown takes 20 real minutes)</li>
+</ul>
+
+<div class="note"><p>The time displayed always counts in "timer minutes", not real minutes. A 10-minute countdown at 2× speed will count down from 10:00 to 0:00, but do so in 5 real minutes.</p></div>
+
+<h2>Speed Modes</h2>
+<p>Two speed modes are available in the hidden panel:</p>
+
+<h3>Ratio mode</h3>
+<p>You set the speed multiplier directly. The timer runs at that fixed multiple of real time for the entire duration.</p>
+
+<h3>Fixed time mode</h3>
+<p>You set both the displayed countdown duration and the real time you want it to take. The app calculates the required speed automatically. For example: display 10 minutes, finish in 8 real minutes → speed is automatically set to 1.25×.</p>
+
+<h2>Realtime When Visible</h2>
+<p>When this option is enabled (in the hidden panel), the timer runs at normal speed (1×) while you are looking at the screen, and makes up any difference in the background.</p>
+
+<p>This means a child watching the timer will see it tick at normal pace. When the screen is off or the app is in the background, the timer catches up toward where it should be according to the target speed.</p>
+
+<h3>Max background speed</h3>
+<p>This sets the maximum speed the timer will use during background catch-up. It must be at least as far from 1× as the target speed. For example, if your target speed is 2×, the max background speed must be at least 2×.</p>
+
+<p>The catch-up algorithm takes a conservative approach: on returning to the foreground, the timer advances to whichever position is smaller — either where it would be at max background speed, or where it ideally should be. It never jumps ahead of the ideal target.</p>
+
+<h2>Alert Settings</h2>
+<p>Tap the bell icon to configure what happens when the timer finishes:</p>
+<ul>
+  <li><strong>Sound</strong> — plays the selected alert tone</li>
+  <li><strong>Vibrate</strong> — vibrates the device (Android and iPhone only)</li>
+</ul>
+<p>Tap the tone name to choose from a list of available sounds. The alert will repeat until dismissed.</p>
+
+<h2>Frequently Asked Questions</h2>
+
+<h3>Does the timer work when the screen is off?</h3>
+<p>Yes. The timer continues in the background. On the native apps (Android/iOS), the alarm will fire even if the screen is off. On the web/PWA version, background timing uses wall-clock time to account for device sleep.</p>
+
+<h3>Does it work offline?</h3>
+<p>Yes, completely. The app requires no internet connection.</p>
+
+<h3>Is my data private?</h3>
+<p>The app collects no data of any kind. See the <a href="privacy.html">Privacy Policy</a> for full details.</p>
+
+<h3>Why does the timer sometimes seem slightly off when I unlock my phone?</h3>
+<p>If "Realtime when visible" is enabled, the timer may be mid-catch-up when you return. It will settle to the correct position shortly. If the option is disabled, the timer runs at the configured speed regardless of screen state.</p>
+
+<h2>Contact</h2>
+<p>For bug reports or questions, please open an issue on the <a href="https://github.com/steelgarden/parenting-timer">GitHub repository</a>, or email <a href="mailto:ben@steelgarden.com">ben@steelgarden.com</a>.</p>
+
+</body>
+</html>
