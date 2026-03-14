@@ -486,45 +486,52 @@
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.7);
     z-index: 100;
-    overflow-y: scroll;
-    -webkit-overflow-scrolling: touch;
-    height: 100dvh;
+    flex-direction: column;
+    background: var(--bg);
   }
-  #helpModal.visible { display: block; }
-  #helpModalContent {
+  #helpModal.visible { display: flex; }
+  #helpModalBar {
+    flex-shrink: 0;
     background: var(--surface);
-    margin: 20px auto;
-    max-width: 420px;
-    padding: 20px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--progress-bg);
+  }
+  #helpModalBar span { font-size: 15px; font-weight: 600; color: var(--text); }
+  #helpClose {
+    padding: 6px 18px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
     border-radius: 16px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  #helpModalScroll {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 20px;
+    max-width: 480px;
+    width: 100%;
+    margin: 0 auto;
     line-height: 1.6;
   }
-  #helpModalContent h1 { font-size: 20px; margin-bottom: 4px; }
-  #helpModalContent h2 { font-size: 15px; margin-top: 24px; color: var(--primary); }
-  #helpModalContent h3 { font-size: 14px; margin-top: 16px; color: var(--text); }
-  #helpModalContent p, #helpModalContent li { font-size: 14px; color: #ccc; margin-top: 6px; }
-  #helpModalContent ul { padding-left: 18px; }
-  #helpModalContent .note {
+  #helpModalScroll h2 { font-size: 15px; margin-top: 24px; color: var(--primary); }
+  #helpModalScroll h3 { font-size: 14px; margin-top: 16px; color: var(--text); }
+  #helpModalScroll p, #helpModalScroll li { font-size: 14px; color: #ccc; margin-top: 6px; }
+  #helpModalScroll ul { padding-left: 18px; }
+  #helpModalScroll .note {
     background: rgba(233,69,96,0.1);
     border-left: 3px solid var(--primary);
     padding: 8px 12px;
     border-radius: 0 8px 8px 0;
     margin: 12px 0;
   }
-  #helpModalContent .note p { margin: 0; }
-  #helpClose {
-    display: block;
-    margin: 24px auto 0;
-    padding: 10px 32px;
-    background: var(--primary);
-    color: #fff;
-    border: none;
-    border-radius: 20px;
-    font-size: 15px;
-    cursor: pointer;
-  }
+  #helpModalScroll .note p { margin: 0; }
 </style>
 </head>
 <body>
@@ -1488,23 +1495,24 @@ document.getElementById('helpLink').addEventListener('click', e => {
 document.getElementById('helpClose').addEventListener('click', () => {
   document.getElementById('helpModal').classList.remove('visible');
 });
-document.getElementById('helpModal').addEventListener('click', e => {
-  if (e.target === e.currentTarget) e.currentTarget.classList.remove('visible');
-});
 (function() {
   let touchStartX = 0;
-  const modal = document.getElementById('helpModal');
-  modal.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
-  modal.addEventListener('touchend', e => {
-    if (e.changedTouches[0].clientX - touchStartX > 60) {
-      modal.classList.remove('visible');
+  const scroll = document.getElementById('helpModalScroll');
+  scroll.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  scroll.addEventListener('touchend', e => {
+    if (e.changedTouches[0].clientX - touchStartX > 80) {
+      document.getElementById('helpModal').classList.remove('visible');
     }
   }, { passive: true });
 })();
 </script>
 
 <div id="helpModal">
-  <div id="helpModalContent">
+  <div id="helpModalBar">
+    <span>Help &amp; Documentation</span>
+    <button id="helpClose">Close</button>
+  </div>
+  <div id="helpModalScroll">
     <h1>Parenting Timer</h1>
     <p style="font-size:13px;color:#888;margin-bottom:8px;">Help &amp; Documentation</p>
 
@@ -1566,8 +1574,6 @@ document.getElementById('helpModal').addEventListener('click', e => {
 
     <h2>Contact</h2>
     <p>For help or bug reports: <a href="mailto:timer@steelgarden.com" style="color:var(--primary);">timer@steelgarden.com</a></p>
-
-    <button id="helpClose">Close</button>
   </div>
 </div>
 </body>
