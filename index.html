@@ -1484,19 +1484,6 @@ document.getElementById('helpLink').addEventListener('click', e => {
   e.preventDefault();
   document.getElementById('helpModal').classList.add('visible');
 });
-document.getElementById('helpClose').addEventListener('click', () => {
-  document.getElementById('helpModal').classList.remove('visible');
-});
-(function() {
-  let touchStartX = 0;
-  const scroll = document.getElementById('helpModalScroll');
-  scroll.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
-  scroll.addEventListener('touchend', e => {
-    if (e.changedTouches[0].clientX - touchStartX > 80) {
-      document.getElementById('helpModal').classList.remove('visible');
-    }
-  }, { passive: true });
-})();
 </script>
 
 <div id="helpModal">
@@ -1563,8 +1550,24 @@ document.getElementById('helpClose').addEventListener('click', () => {
     <h2>Contact</h2>
     <p>For help or bug reports: <a href="mailto:timer@steelgarden.com" style="color:var(--primary);">timer@steelgarden.com</a></p>
 
-    <button id="helpClose">Close</button>
+    <button id="helpClose" onclick="document.getElementById('helpModal').classList.remove('visible')">Close</button>
   </div>
 </div>
+<script>
+(function() {
+  document.getElementById('helpLink').addEventListener('click', function(e) {
+    e.preventDefault();
+    document.getElementById('helpModal').classList.add('visible');
+  });
+  var touchStartX = 0;
+  var scroll = document.getElementById('helpModalScroll');
+  scroll.addEventListener('touchstart', function(e) { touchStartX = e.touches[0].clientX; }, { passive: true });
+  scroll.addEventListener('touchend', function(e) {
+    if (e.changedTouches[0].clientX - touchStartX > 80) {
+      document.getElementById('helpModal').classList.remove('visible');
+    }
+  }, { passive: true });
+})();
+</script>
 </body>
 </html>
