@@ -493,6 +493,7 @@
   }
   #helpModal.visible { display: block; }
   #helpModalContent {
+    position: relative;
     background: var(--surface);
     margin: 20px auto;
     max-width: 420px;
@@ -514,14 +515,15 @@
   }
   #helpModalContent .note p { margin: 0; }
   #helpClose {
-    display: block;
-    margin: 20px auto 0;
-    padding: 10px 32px;
-    background: var(--primary);
-    color: #fff;
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    padding: 4px 10px;
+    background: none;
+    color: var(--text-dim);
     border: none;
-    border-radius: 20px;
-    font-size: 15px;
+    font-size: 22px;
+    line-height: 1;
     cursor: pointer;
   }
 </style>
@@ -1494,6 +1496,7 @@ document.getElementById('helpModal').addEventListener('click', e => {
 
 <div id="helpModal">
   <div id="helpModalContent">
+    <button id="helpClose">&#x2715;</button>
     <h1>Parenting Timer</h1>
     <p style="font-size:13px;color:#888;margin-bottom:8px;">Help &amp; Documentation</p>
 
@@ -1542,7 +1545,6 @@ document.getElementById('helpModal').addEventListener('click', e => {
     <h2>Contact</h2>
     <p>For help or bug reports: <a href="mailto:timer@steelgarden.com" style="color:var(--primary);">timer@steelgarden.com</a></p>
 
-    <button id="helpClose">Close</button>
   </div>
 </div>
 </body>
